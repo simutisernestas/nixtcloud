@@ -90,7 +90,10 @@ in
     "0 2 * * *    root    sudo -u nextcloud /run/current-system/sw/bin/nextcloud-occ maintenance:repair"
     "5 2 * * 0    root    sudo -u nextcloud /run/current-system/sw/bin/nextcloud-occ maintenance:mimetype:update-db"
     "10 2 * * 0   root    sudo -u nextcloud /run/current-system/sw/bin/nextcloud-occ maintenance:mimetype:update-js"
-    "0 3 * * 0    root    /run/current-system/sw/bin/bash /etc/nixos/updater.sh"
+    ### Automatic system updates are disabled by default: they would silently pull and rebuild
+    ### from github:jjacke13/nixtcloud as root with no review. Run updater.sh manually instead:
+    ###   sudo bash /etc/nixos/updater.sh
+    #"0 3 * * 0    root    /run/current-system/sw/bin/bash /etc/nixos/updater.sh"
     #"0 15 * * 5   root    /run/current-system/sw/bin/bash /etc/nixos/backup-reminder.sh" #will be added in the future
   ];
   

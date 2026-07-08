@@ -18,7 +18,7 @@
 - **☁️ Full Nextcloud stack**, pre-configured
 - **🔐 End-to-end encrypted remote access**, no port forwarding
 - **📦 Plug in USB drives**, they're auto-mounted & usable instantly
-- **🔁 Self-healing system** with daily reboots and weekly updates
+- **🔁 Self-healing system** with daily reboots and manually-triggered updates
 - **📱 Remote access by QR code**, using Holesail
 
 Perfect for digital minimalists, privacy purists, and anyone fed up with Google Drive.
@@ -107,14 +107,14 @@ After flashing and booting your Raspberry Pi:
   - SSH root login disabled by default
   - Firewall restricts all but essential ports
   - Remote access is encrypted, zero-config, and QR-based
-  - Weekly auto-updates (or on demand)
+  - No unattended system auto-updates — updates are pulled from GitHub only when you run `updater.sh` yourself
 
 ---
 
 ## 🔄 What Makes It "Self-Healing"?
 
 - Scheduled **maintenance tasks**
-- Automatic check and apply of updates and then reboot
+- Manual check and apply of updates (run `sudo bash /etc/nixos/updater.sh`), then reboot
 - USB drives auto-mount after 30 seconds
 - "Magic files" in Nextcloud let you trigger actions like reboot or regenerate P2P credentials by just deleting a file.
 
