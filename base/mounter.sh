@@ -363,18 +363,37 @@ should_skip_device() {
     return 1  # Don't skip - device is safe to mount
 }
 
+# Determine whether a whole-disk device has partitions. A disk that has been
+# repartitioned can still carry a stale filesystem signature (e.g. a leftover
+# FAT boot sector) directly on the raw disk from before it was partitioned;
+# blkid still detects it, but it isn't a real, separately-mountable filesystem
+# and must not be mounted alongside its actual partitions.
+disk_has_partitions() {
+    local disk="$1"
+    lsblk -rpno TYPE "$disk" 2>/dev/null | grep -q '^part$'
+}
+
 # Scan for and mount all eligible USB storage devices
 process_mountable_devices() {
     log "Scanning for mountable devices..."
     mkdir -p "$MOUNT_DIR"
-    
+
     local mounted_any=false
-    
+
     # Process all block devices (disks and partitions)
     while IFS= read -r device; do
         # Skip if already mounted
         is_device_mounted "$device" && continue
-        
+
+        # Skip whole-disk devices that have partitions - only the partitions
+        # themselves should be considered for mounting.
+        local dev_type
+        dev_type=$(lsblk -rno TYPE "$device" 2>/dev/null | head -1)
+        if [[ "$dev_type" == "disk" ]] && disk_has_partitions "$device"; then
+            log "Skipping whole-disk device with existing partitions: $device"
+            continue
+        fi
+
         # Skip if no filesystem detected
         local fs_type
         fs_type=$(blkid -o value -s TYPE "$device" 2>/dev/null || true)

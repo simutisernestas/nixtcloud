@@ -100,7 +100,9 @@ in
   ########## SSH & Security ##########
   services.openssh.enable = true;
   services.openssh.settings.PermitRootLogin = "no";
-  #users.users.admin.openssh.authorizedKeys.keys = [ "your key here"];
+  services.openssh.settings.PasswordAuthentication = false;
+  services.openssh.settings.KbdInteractiveAuthentication = false;
+  users.users.admin.openssh.authorizedKeys.keys = [ "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMtXV08kDi7eePGWFa2uPoVyeH+u8KkFbIwVna24i3qq ernie@andromeda" ];
   networking.firewall = {
     enable = true;
     allowedTCPPorts = [ 22 80 443 ];
