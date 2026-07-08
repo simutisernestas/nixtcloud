@@ -226,3 +226,90 @@ nix build .#packages.aarch64-linux.Nanopi-neo3
 - [Nextcloud](https://nextcloud.com) for the freedom to host your own cloud
 - [NixOS](https://nixos.org) for reproducibility that actually works
 - Everyone contributing to open source
+
+---
+
+## 🔧 Live-Editing a Deployed Pi
+
+How to fix a bug on an already-running Nixtcloud device (not a fresh SD-card flash) by editing this repo, pushing it, and rebuilding the device in place over SSH.
+
+### Why This Workflow, Not a Local Edit
+
+The device does **not** carry a flake checkout. `/etc/nixos` on a running box only contains a few files copied in via `environment.etc`:
+
+```
+/etc/nixos/adminpass.txt
+/etc/nixos/device.txt       # e.g. "Rpi5" - matches the flake output name
+/etc/nixos/mounter.sh
+/etc/nixos/updater.sh
+```
+
+There's no `configuration.nix`/`flake.nix` to edit directly on the device. The system was built from, and can only be rebuilt from, a flake reference — same mechanism `updater.sh` itself uses. So the fix has to happen in a real git checkout of this repo, get pushed somewhere reachable over the internet (a fork works fine, doesn't need to be upstream), and then the device pulls and rebuilds from that reference.
+
+### Prerequisites
+
+- SSH access to the device as `admin` (key-based, if `PasswordAuthentication` has been turned off per the SSH hardening notes elsewhere in this repo)
+- The `admin` sudo password (needed for `nixos-rebuild switch` and for reading anything root-only, e.g. `blkid` on raw devices, `dmesg`)
+- A git remote you can push to — add your fork if you haven't:
+  ```
+  git remote add fork git@github.com:<you>/nixtcloud.git
+  ```
+
+### Workflow
+
+**1. Diagnose first, over SSH, read-only where possible.**
+
+Most of the useful commands don't need root:
+```
+ssh admin@<hostname>.local 'systemctl status <service>.service --no-pager -l'
+ssh admin@<hostname>.local 'journalctl -u <service>.service -n 80 --no-pager'
+ssh admin@<hostname>.local 'lsblk -f'
+```
+Things that touch raw devices or protected logs need sudo. To run a sudo command over a non-interactive SSH session (no TTY for a password prompt), pipe the password to `sudo -S`:
+```
+ssh admin@<hostname>.local 'echo "<password>" | sudo -S dmesg -T | tail -60'
+```
+
+**2. Make the fix in a real local checkout of this repo** (not on the device) — edit the relevant file(s) under `base/` or `hardware/`, and review before committing:
+```
+git diff
+```
+
+**3. Commit and push to your fork:**
+```
+git add <changed files>
+git commit -m "..."
+git push fork main
+```
+
+**4. Rebuild and switch the live device, pulling from that fork:**
+```
+ssh admin@<hostname>.local 'echo "<password>" | sudo -S nixos-rebuild switch --flake github:<you>/nixtcloud#<Device>'
+```
+`<Device>` must match what's in `/etc/nixos/device.txt` on that box (`Rpi4`, `Rpi5`, or `Nanopi-neo3`).
+
+Note: unlike building fresh on a dev laptop, no `--accept-flake-config` is needed here — the device's own `/etc/nix/nix.conf` (baked in from `nix.settings` in `base/configuration.nix`) already lists `nix-community.cachix.org` as a substituter directly, and `root` is already a trusted Nix user. So `nixos-rebuild switch` run via `sudo` just works without any extra trust prompts.
+
+`nixos-rebuild switch` (not `boot`) activates the new generation immediately — any service whose config changed gets restarted right away.
+
+**5. Verify.**
+- Confirm the switch output ends with `Done. The new configuration is /nix/store/...` with no errors.
+- Re-check the specific thing you fixed (`systemctl status`, `journalctl`, `lsblk`, whatever applies).
+- **If you touched anything SSH/auth-related, open a brand-new SSH connection and confirm it works before closing your existing session** — don't get locked out of your only way in.
+
+### Worked Example From This Repo's History
+
+Two real bugs were fixed on a live, already-deployed box this way:
+
+- **`base/mounter.sh`**: a USB drive that had been reformatted (whole-disk FAT32 → partition table + exFAT) still carried a stale FAT boot-sector signature directly on the raw disk device from before the reformat. `blkid` still detected it, so the mounter tried to mount the raw disk itself as a filesystem alongside its real partition — producing garbled directory listings and I/O errors, even though the actual partition's data was completely healthy. Fix: skip whole-disk devices that already have partitions (`disk_has_partitions` check added to `process_mountable_devices`).
+- **`base/configuration.nix`**: added the admin user's SSH public key and disabled `PasswordAuthentication`/`KbdInteractiveAuthentication`, moving SSH to key-only auth.
+
+Both were committed, pushed to a fork, and deployed with `nixos-rebuild switch --flake github:<fork>#Rpi5` directly against the running device — no reflash needed.
+
+A separate issue (first-boot/startup services failing because the device had no internet access on its very first boot, over a year earlier) needed **no config change at all** — just manually restarting those systemd units once connectivity was actually available (`sudo systemctl restart first-boot.service`, then `startup.service`), letting their existing `onSuccess=` chain re-trigger the dependent services normally. Worth checking whether a live retry alone fixes a problem before assuming a code fix and rebuild are necessary — it's the lower-risk option.
+
+### Risk Notes
+
+- This modifies a live production device directly, in place — there's no staging environment. For anything invasive or uncertain, prefer testing the change in a local VM/build first (see this repo's notes on building and testing locally) before pushing it to a device people rely on.
+- `nixos-rebuild switch` restarts changed services immediately, which can mean a brief interruption to Nextcloud web access (nginx/phpfpm) or other running services during the switch.
+- If a switch goes wrong, `sudo nixos-rebuild switch --rollback` reactivates the previous generation. Older generations are also selectable from the bootloader menu at boot if the system doesn't come up cleanly.
