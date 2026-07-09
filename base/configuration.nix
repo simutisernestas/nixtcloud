@@ -116,17 +116,28 @@ in
   
   #### DON'T CHANGE ANYTHING BELOW THIS LINE UNLESS YOU ABSOLUTELY KNOW WHAT YOU ARE DOING ###
 
-  ########## AVAHI ########## 
+  ########## AVAHI ##########
   services.avahi = {
     enable = true;
     hostName = name;
-    nssmdns4 = true; 
+    nssmdns4 = true;
     reflector = true;
     openFirewall = true;
     publish.enable = true;
     publish.userServices = true;
     publish.domain = true;
     publish.addresses = true;
+  };
+  ### Seen in practice: avahi-daemon died within minutes of a fresh boot, with no
+  ### crash signal logged (proximate cause unrecoverable - dmesg is restricted and
+  ### coredumps are disabled above). The stock unit has no restart policy and left
+  ### a stale /run/avahi-daemon/pid behind, so it stayed down until someone
+  ### manually cleared the pid file and restarted it. Auto-restart, plus clearing
+  ### the stale pid file before each start, makes it self-heal instead.
+  systemd.services.avahi-daemon.serviceConfig = {
+    Restart = "on-failure";
+    RestartSec = "5s";
+    ExecStartPre = [ "-${pkgs.coreutils}/bin/rm -f /run/avahi-daemon/pid" ];
   };
   ###########################
 
