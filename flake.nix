@@ -11,12 +11,11 @@
   
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
-    holesail.url = "github:jjacke13/holesail-nix/test";
     raspberry-pi-nix.url = "github:nix-community/raspberry-pi-nix";
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
   };
 
-  outputs = { self, nixpkgs, holesail, raspberry-pi-nix, nixos-hardware, ... }:
+  outputs = { self, nixpkgs, raspberry-pi-nix, nixos-hardware, ... }:
   {
     nixosModules.state = { system.stateVersion = "25.11"; };
 
@@ -29,7 +28,6 @@
     nixosConfigurations= {
       Rpi4 = nixpkgs.lib.nixosSystem {
         modules = [
-          holesail.nixosModules.aarch64-linux.holesail
           ./base/configuration.nix
           ./hardware/Rpi4.nix
           nixos-hardware.nixosModules.raspberry-pi-4
@@ -40,7 +38,6 @@
 
       Rpi5 = nixpkgs.lib.nixosSystem {
         modules = [
-          holesail.nixosModules.aarch64-linux.holesail
           ./base/configuration.nix
           ./hardware/Rpi5.nix
           raspberry-pi-nix.nixosModules.raspberry-pi
@@ -51,7 +48,6 @@
 
       Nanopi-neo3 = nixpkgs.lib.nixosSystem {
         modules = [
-          holesail.nixosModules.aarch64-linux.holesail
           ./base/configuration.nix
           ./hardware/Nanopi-neo3.nix
           "${nixpkgs}/nixos/modules/installer/sd-card/sd-image-aarch64.nix"

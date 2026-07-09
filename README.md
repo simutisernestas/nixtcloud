@@ -4,10 +4,9 @@
 [![Nextcloud](https://img.shields.io/badge/Nextcloud-32-orange.svg?style=flat-square&logo=nextcloud)](https://nextcloud.com)
 [![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-4%20%7C%205-c51a4a.svg?style=flat-square&logo=raspberry-pi)](https://www.raspberrypi.org)
 [![NanoPi NEO3](https://img.shields.io/badge/NanoPi-NEO3-green.svg?style=flat-square)](https://www.friendlyelec.com/index.php?route=product/product&product_id=279)
-[![P2P: Holesail](https://img.shields.io/badge/P2P-Holesail-purple.svg?style=flat-square)](https://holesail.io)
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](https://opensource.org/licenses/GPL-3.0)
 
-**Nixtcloud** turns a Raspberry Pi or NanoPi NEO3 into a privacy-first, zero-config personal cloud — powered by [NixOS](https://nixos.org), [Nextcloud](https://nextcloud.com), and peer-to-peer remote access via [Holesail](https://holesail.io). Built for the self-hosting crowd who want full control without constant babysitting.
+**Nixtcloud** turns a Raspberry Pi or NanoPi NEO3 into a privacy-first, zero-config personal cloud — powered by [NixOS](https://nixos.org) and [Nextcloud](https://nextcloud.com). Built for the self-hosting crowd who want full control without constant babysitting.
 
 ---
 
@@ -16,10 +15,8 @@
 > **One command. Full cloud. Private, persistent, and portable.**
 
 - **☁️ Full Nextcloud stack**, pre-configured
-- **🔐 End-to-end encrypted remote access**, no port forwarding
 - **📦 Plug in USB drives**, they're auto-mounted & usable instantly
 - **🔁 Self-healing system** with daily reboots and manually-triggered updates
-- **📱 Remote access by QR code**, using Holesail
 
 Perfect for digital minimalists, privacy purists, and anyone fed up with Google Drive.
 
@@ -106,7 +103,6 @@ After flashing and booting your Raspberry Pi:
 
   - SSH root login disabled by default
   - Firewall restricts all but essential ports
-  - Remote access is encrypted, zero-config, and QR-based
   - No unattended system auto-updates — updates are pulled from GitHub only when you run `updater.sh` yourself
 
 ---
@@ -116,7 +112,7 @@ After flashing and booting your Raspberry Pi:
 - Scheduled **maintenance tasks**
 - Manual check and apply of updates (run `sudo bash /etc/nixos/updater.sh`), then reboot
 - USB drives auto-mount after 30 seconds
-- "Magic files" in Nextcloud let you trigger actions like reboot or regenerate P2P credentials by just deleting a file.
+- A "magic file" in Nextcloud lets you trigger a reboot by just deleting it.
 
 ---
 
@@ -126,17 +122,6 @@ After flashing and booting your Raspberry Pi:
 - Auto-detected and mounted
 - Appears in Nextcloud as external storage
 - Supports multiple partitions per device
-
----
-
-## 🌍 Remote Access, No Router Hacks Required
-
-Using Holesail:
-- Encrypted P2P tunnel
-- Credentials delivered as `remote.txt` and a QR image inside your Nextcloud
-- Public folder sharing via separate connection string
-
-> Want to access your files while traveling without exposing ports? Done.
 
 ---
 
@@ -164,20 +149,15 @@ time.timeZone = "Europe/Berlin";
 
 - **NixOS** for immutability and reproducibility
 - **Nextcloud 32**
-- **Holesail** for P2P remote access
 - Custom systemd services:
   - `startup.service`
   - `mymnt.service`
-  - `p2pmagic.service`
-  - `p2public.service`
   - `rebooter.service`
 
 ```mermaid
 graph TD
   A[nextcloud-setup] --> B[startup.service]
   B --> C[mymnt.service]
-  B --> D[p2pmagic.service]
-  B --> E[p2public.service]
   B --> F[rebooter.service]
 ```
 
@@ -193,10 +173,6 @@ graph TD
 - Check if formatted correctly
 - Wait 30-45 seconds after plugging in
 - Run: `journalctl -u mymnt.service`
-
-**Remote access fails?**
-- Make sure Holesail app is installed and working
-- Double-check the QR or connection string
 
 ---
 
@@ -222,7 +198,6 @@ nix build .#packages.aarch64-linux.Nanopi-neo3
 
 ## 🙌 Credits
 
-- [Holesail](https://holesail.io) for seamless P2P networking
 - [Nextcloud](https://nextcloud.com) for the freedom to host your own cloud
 - [NixOS](https://nixos.org) for reproducibility that actually works
 - Everyone contributing to open source

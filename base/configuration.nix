@@ -106,12 +106,7 @@ in
   networking.firewall = {
     enable = true;
     allowedTCPPorts = [ 22 80 443 ];
-    ## We add the following to firewall so Nixtcloud can be accessed with Holesail not only remotely, but also from the local network
-    extraCommands = ''
-      # Allow connections from common home network IP ranges
-      iptables -A nixos-fw -s 192.168.0.0/16 -j nixos-fw-accept
-    '';
-  };  
+  };
   #####################################
   
   #### DON'T CHANGE ANYTHING BELOW THIS LINE UNLESS YOU ABSOLUTELY KNOW WHAT YOU ARE DOING ###
@@ -149,7 +144,7 @@ in
     wantedBy = [ "multi-user.target" ];
     after = ["network.target" "nextcloud-setup.service"];
     enable = true;
-    path = [ pkgs.coreutils pkgs.qrencode pkgs.openssl ];
+    path = [ pkgs.coreutils ];
     script = ''
           /run/current-system/sw/bin/nextcloud-occ app:enable files_external
           /run/current-system/sw/bin/nextcloud-occ app:disable files_trashbin
@@ -160,25 +155,11 @@ in
               chown nextcloud:nextcloud /var/lib/nextcloud/data/admin/files/rebooter.txt
               /run/current-system/sw/bin/nextcloud-occ files:scan --path=/admin/files
           fi
-          if [ ! -f /var/lib/nextcloud/data/admin/files/remote.txt ]; then
-              touch /var/lib/nextcloud/data/admin/files/remote.txt
-              echo -n "hs://s000$(openssl rand -hex 32)" > /var/lib/nextcloud/data/admin/files/remote.txt
-              qrencode -o /var/lib/nextcloud/data/admin/files/remote.jpg -r /var/lib/nextcloud/data/admin/files/remote.txt -s 10
-              chown nextcloud:nextcloud /var/lib/nextcloud/data/admin/files/remote.txt
-              chown nextcloud:nextcloud /var/lib/nextcloud/data/admin/files/remote.jpg
-              /run/current-system/sw/bin/nextcloud-occ files:scan --path=/admin/files
-          fi
-          if [ ! -f /mnt/Public/public.txt ]; then
-              touch /mnt/Public/public.txt
-              echo -n "hs://s000$(openssl rand -hex 32)" > /mnt/Public/public.txt
-              qrencode -o /mnt/Public/public.jpg -r /mnt/Public/public.txt -s 10
-              chown -R nextcloud:nextcloud /mnt/Public
-          fi
     '';
     serviceConfig.Type = "oneshot";
-    before = ["mymnt.service" "p2pmagic.service" "p2public.service" "rebooter.service"];
-    onSuccess = ["mymnt.service" "p2pmagic.service" "p2public.service" "rebooter.service"];
-  };  
+    before = ["mymnt.service" "rebooter.service"];
+    onSuccess = ["mymnt.service" "rebooter.service"];
+  };
   ############################################################################
 
   ### The following service automounts external usb devices with correct permissions and creates the corresponding Nextcloud external storages.######
@@ -194,33 +175,8 @@ in
 	  };
   };
   ################################################################################
-  
-  #### The following service enables Holesail to do its magic ####
-  services.holesail-server.p2pmagic = {
-  	enable = true;
-    host = "localhost";
-  	port = 8080;
-  	key-file = "/var/lib/nextcloud/data/admin/files/remote.txt";
-    user = "nextcloud";
-    group = "nextcloud";
-  };
-  ###############################################################################
-  
-  ### The following service enables the share of the Public folder with Holesail ###
-  services.holesail-filemanager.p2public = {
-  	enable = true;
-    host = "localhost";
-  	key-file = "/mnt/Public/public.txt";
-    directory = "/mnt/Public";
-    username = "test";
-    password = "test";
-    role = "user";
-    user = "nextcloud";
-    group = "nextcloud";
-  };
-  ##############################################################################
-  
-  ##### This service reboots the system if the rebooter.txt file gets deleted. On startup, it gets created again ####   
+
+  ##### This service reboots the system if the rebooter.txt file gets deleted. On startup, it gets created again ####
   systemd.services.rebooter = {
     description = "rebooter";
     enable = true;
